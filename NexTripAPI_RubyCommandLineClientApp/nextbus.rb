@@ -50,6 +50,7 @@ elapsed = Time.now - searchtime
 n=n+1
 
 puts n.to_s + " The Next Bus on Route " + ARGV[0] + " going " + nextBusDirection + " " + nextBusDescription + " departs from " + ARGV[2] + " at " + nextBus 
-end                                                                  
-puts Time.now.to_s 
+end  
+puts "Take your time... travel safely."                                                                
+puts "The Time now is " + Time.now.to_s 
 
