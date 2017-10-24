@@ -1,0 +1,726 @@
+swagger: '2.0'
+info:
+  version: BETA
+  title: MetroTransit NexTrip API (BETA)
+  termsOfService: 'http://svc.metrotransit.org'
+  description: |
+    ***
+
+      - BETA release of an OAuth protected iteration of the metrotransit Bus Routes API
+      - @iryanb (For Dev and Test Use Only, All Rights Reserved (c) 10.23.2017)
+
+    ***
+
+    ## MetroTransit NexTrip API (BETA)
+
+    ***
+
+      - Currently this API permits 2 requests per minute for anonymous API clients 
+      - In a future release this API will offer rate limits for OAuth clients
+      - OAuth 2.0 AccessCode Tokens Scopes 
+      
+          - routes:all                  Grants read access to all routes
+          - routes:express              Grants read access to only express routes
+          - routes:local                Grants read access to local routes
+
+      # GET /NexTrip/{ROUTE}/{DIRECTION}/{STOP}
+
+      - GET TIMEPOINT DEPARTURES
+      - To make a valid request specify the integer values of the Route ID, Direction, and the Bus Stop ID as path parameters
+      - Without an Accept Header the default response schema is XML, for JSON set the Accept header to application/json 
+      
+      # GET /NexTrip/{STOPID}
+      
+      - GET DEPARTURES
+      - This operation is used to return a list of departures scheduled for any given bus stop. 
+      - A StopID is an integer value identifying any one of the many thousands of bus stops in the metro. 
+      - Stop information can be derived from the GTFS schedule data updated weekly for public use. 
+      - datafinder.org/metadata/transit_schedule_google_feed.html
+
+      # GET /NexTrip/Directions/{ROUTE}
+
+      - GET DIRECTIONS
+      - Returns the two directions that are valid for a given route. Either North/South or East/West. 
+      - The result includes text/value pair with the direction name and an ID. 
+      - Directions are identified with an ID value. 1 = South, 2 = East, 3 = West, 4 = North. 
+
+      # GET /NexTrip/Providers
+
+      - GET PROVIDERS
+      - Returns a list of area Transit providers. 
+      - Providers are identified in the list of Routes allowing routes to be selected for a single provider. 
+
+      # GET /NexTrip/Routes
+
+      - GET ROUTES 
+      - Returns a list of Transit routes that are in service on the current day.
+
+      # GET /NexTrip/Stops/{ROUTE}/{DIRECTION}
+
+      - GET STOPS
+      - Returns a list of Timepoint stops for the given Route/Direction. 
+      - The result includes text/value pairs with the stop description and a 4 character stop (or node) identifier. 
+
+      # GET /NexTrip/VehicleLocations/{ROUTE}
+
+      - GET VEHICLE LOCATIONS
+      - This operation returns a list of vehicles currently in service that have recently (within 5 minutes) 
+      - reported their locations. A route paramter is used to return results for the given route. 
+      - Use "0" for the route parameter to return a list of all vehicles in service. 
+      
+    ***
+
+      # POST /NexTrip/update/Routes (Future API Enhancement)
+      
+
+      - This API operation requires an admin_AccessCode Token with one of the following scopes 
+      
+          - admin_updateroutes
+
+      - The POST message body must be a properly formatted JSON object with the following fields 
+
+          ```
+          
+                {
+                  "Route":"integerRouteID", 
+                  "ProviderID":"integerProviderID", 
+                  "duration":"integerMinutes", 
+                  "stops":[{"Text":"stringStopName", "Value":"stringStopID"},{"Text":"stringStopName", "Value":"stringStopID"}]
+                  "numberofstops":"integerStops", 
+                  "express":"True or False", 
+                  "Description":"Details about the route"
+                }
+                
+          ```
+
+    ## Security Definitions
+        
+      ***
+      # AccessCode
+      
+        - Web and Mobile Authenticated Users
+        
+            - routes:all                  Grants read access to all routes
+            - routes:express              Grants read access to only express routes
+            - routes:local                Grants read access to local routes
+            - readpublic_key              List and view details for public keys
+
+            
+      ***
+      # MobileApp_Implicit
+        - Implicitly Trusted Mobile App with Anonymous User 
+
+            - readpublic_key              List and view details for public keys
+            
+      ***
+      # admin_AccessCode
+        - administrative purposes 
+            - admin_updateroutes          Grants write access to routes data
+            - admin_writepublic_key       Create, list, and view details for public keys
+            - admin_public_key            Fully manage PKI keys
+
+      ***
+externalDocs:
+  description: Privacy Policy
+  url: 'https://svc.metrotransit.org'
+
+host: 'svc.metrotransit.org'
+schemes:
+  - https
+basePath: /
+consumes:
+  - application/json
+produces:
+  - application/json
+  - application/xml
+security:
+  - AccessCode:
+      - 'routes:all'
+      - 'routes:express'
+      - 'routes:local'
+      - readpublic_key
+  - MobileApp_Implicit:
+      - readpublic_key
+  - admin_AccessCode:
+      - admin_updateroutes
+      - admin_writepublic_key
+      - admin_public_key
+paths:
+  /NexTrip/oauth20/authorize:
+    get:
+      operationId: GetAuthCode
+      description: Request a temporary code for the desired API Access Token Scope(s)
+      tags:
+        - Access Control
+      parameters:
+        - name: grant_type
+          in: query
+          required: true
+          type: string
+          description: value = authorization_code
+        - name: client_id
+          in: query
+          required: true
+          type: string
+          description: >-
+            a valid OAuth2 client id registered to the app authorized to use the
+            API is required (this changes with each app store version iteration)
+        - name: redirect_uri
+          in: query
+          required: true
+          type: string
+          description: App Callback URI
+      responses:
+        '200':
+          description: >-
+            Successful response with the code and scope query parameters
+            appended to the redirect_uri in the Location HTTP Header
+          schema:
+            $ref: '#/definitions/success'
+        '401':
+          description: 'Unknown User, Not Authenticated'
+          schema:
+            $ref: '#/definitions/err'
+        '403':
+          description: >-
+            Not Authorized.  Missing Authorization Header, Unknown User or App
+            ID or incorrect password or secret.
+          schema:
+            $ref: '#/definitions/err'
+        '418':
+          description: Tea Kettles are not currently supported in this version of the API
+          schema:
+            $ref: '#/definitions/err'
+        '429':
+          description: 'Transaction Volume Quota Exceeded, try again in 1 minute.'
+          schema:
+            $ref: '#/definitions/err'
+        '500':
+          description: Incomplete Request or Server Error
+          schema:
+            $ref: '#/definitions/err'
+
+  /NexTrip/oauth20/token:
+    post:
+      operationId: PostTokenRequest
+      description: >-
+        Authorization Code grant types require a POST to the token endpoint
+        after a GET for Authorization code.
+      tags:
+        - Access Control
+      responses:
+        '200':
+          description: Successful response
+          schema:
+            $ref: '#/definitions/OAuth_Token'
+        '401':
+          description: 'Unknown User, Not Authenticated'
+          schema:
+            $ref: '#/definitions/err'
+        '403':
+          description: >-
+            Not Authorized.  Missing Authorization Header, Unknown User or App
+            ID or incorrect password or secret.
+          schema:
+            $ref: '#/definitions/err'
+        '429':
+          description: 'Transaction Volume Quota Exceeded, try again in 1 minute.'
+          schema:
+            $ref: '#/definitions/err'
+        '500':
+          description: Incomplete Request or Server Error
+          schema:
+            $ref: '#/definitions/err'
+    get:
+      operationId: GetTokenRequest
+      description: >-
+        Applications request an implicit token with a client id and secret prior
+        to user authentication
+      tags:
+        - Access Control
+      parameters:
+        - name: grant_type
+          in: query
+          required: true
+          type: string
+          description: value = implicit
+        - name: client_id
+          in: query
+          required: true
+          type: string
+          description: >-
+            a valid  OAuth2 client id registered to the app authorized to use
+            the API is required (this changes with each app store version
+            iteration)
+        - name: client_secret
+          in: query
+          required: true
+          type: string
+          description: >-
+            the client secret associated to the app client id (this changes with
+            each app store version iteration)
+      responses:
+        '200':
+          description: Successful response
+          schema:
+            $ref: '#/definitions/OAuth_Token'
+        '401':
+          description: 'Unknown User, Not Authenticated'
+          schema:
+            $ref: '#/definitions/err'
+        '403':
+          description: >-
+            Not Authorized.  Missing Authorization Header, Unknown User or App
+            ID or incorrect password or secret.
+          schema:
+            $ref: '#/definitions/err'
+        '429':
+          description: 'Transaction Volume Quota Exceeded, try again in 1 minute.'
+          schema:
+            $ref: '#/definitions/err'
+        '500':
+          description: 'Bad Request (User Error, Network Packet Loss), Server Error'
+          schema:
+            $ref: '#/definitions/err'
+
+  /NexTrip/{ROUTE}/{DIRECTION}/{STOP}:
+    get:
+      operationId: GetTimepointDepartures
+      security:
+        - AccessCode:
+            - 'routes:all'
+            - 'routes:express'
+            - 'routes:local'
+      description: Returns the scheduled departures for a selected route, direction and timepoint stop.
+      tags:
+        - Bus Routes
+      parameters:
+        - name: ROUTE
+          in: path
+          required: true
+          type: integer
+          description: Sepcify the Route ID as an integer. 
+        - name: DIRECTION
+          in: path
+          required: true
+          type: integer
+          description: Specify the direction as an integer.  1 (South), 2 (East), 3 (West), 4 (North)
+        - name: STOP
+          in: path
+          required: true
+          type: string
+          description: Specify the value of the Bus Stop ID as an abbreviated string 
+      responses:
+        '200':
+          description: Successful response
+          schema:
+            $ref: '#/definitions/TimePoints'
+        '401':
+          description: 'Unknown User, Not Authenticated'
+          schema:
+            $ref: '#/definitions/err'
+        '403':
+          description: >-
+            Not Authorized. Expired or Missing Access Token, or Access Token
+            lacks the scope of entitlement required
+          schema:
+            $ref: '#/definitions/err'
+        '429':
+          description: 'Transaction Volume Quota Exceeded, try again in 1 minute.'
+          schema:
+            $ref: '#/definitions/err'
+        '500':
+          description: Incomplete Request or Server Error
+          schema:
+            $ref: '#/definitions/err'
+
+  /NexTrip/{STOPID}:
+    get:
+      operationId: GetDepartures
+      security:
+        - AccessCode:
+            - 'routes:all'
+            - 'routes:express'
+            - 'routes:local'
+      description: Returns a list of departures scheduled for any given bus stop.
+      tags:
+        - Bus Routes
+      parameters:
+        - name: STOPID
+          in: path
+          required: true
+          type: string
+          description: Specify the value of the Bus Stop ID as an abbreviated string 
+      responses:
+        '200':
+          description: Successful response
+          schema:
+            $ref: '#/definitions/success'
+        '401':
+          description: 'Unknown User, Not Authenticated'
+          schema:
+            $ref: '#/definitions/err'
+        '403':
+          description: >-
+            Not Authorized. Expired or Missing Access Token, or Access Token
+            lacks the scope of entitlement required
+          schema:
+            $ref: '#/definitions/err'
+        '429':
+          description: 'Transaction Volume Quota Exceeded, try again in 1 minute.'
+          schema:
+            $ref: '#/definitions/err'
+        '500':
+          description: Incomplete Request or Server Error
+          schema:
+            $ref: '#/definitions/err'
+
+  /NexTrip/Directions/{ROUTE}:
+    get:
+      operationId: GetDirections
+      security:
+        - AccessCode:
+            - 'routes:all'
+            - 'routes:express'
+            - 'routes:local'
+      description: Returns the two directions that are valid for a given route.
+      tags:
+        - Bus Routes
+      parameters:
+        - name: ROUTE
+          in: path
+          required: true
+          type: integer
+          description: Sepcify the Route ID as an integer. 
+      responses:
+        '200':
+          description: Successful response
+          schema:
+            $ref: '#/definitions/success'
+        '401':
+          description: 'Unknown User, Not Authenticated'
+          schema:
+            $ref: '#/definitions/err'
+        '403':
+          description: >-
+            Not Authorized. Expired or Missing Access Token, or Access Token
+            lacks the scope of entitlement required
+          schema:
+            $ref: '#/definitions/err'
+        '429':
+          description: 'Transaction Volume Quota Exceeded, try again in 1 minute.'
+          schema:
+            $ref: '#/definitions/err'
+        '500':
+          description: Incomplete Request or Server Error
+          schema:
+            $ref: '#/definitions/err'
+
+ 
+  /NexTrip/Providers:
+    get:
+      operationId: GetProviders
+      security:
+        - AccessCode:
+            - 'routes:all'
+            - 'routes:express'
+            - 'routes:local'
+      description: >-
+        Returns a list of area Transit providers. 
+        Providers are identified in the list of Routes allowing routes to be selected for a single provider. 
+      tags:
+        - Bus Routes
+      responses:
+        '200':
+          description: Successful response
+          schema:
+            $ref: '#/definitions/success'
+        '401':
+          description: 'Unknown User, Not Authenticated'
+          schema:
+            $ref: '#/definitions/err'
+        '403':
+          description: >-
+            Not Authorized. Expired or Missing Access Token, or Access Token
+            lacks the scope of entitlement required
+          schema:
+            $ref: '#/definitions/err'
+        '429':
+          description: 'Transaction Volume Quota Exceeded, try again in 1 minute.'
+          schema:
+            $ref: '#/definitions/err'
+        '500':
+          description: Incomplete Request or Server Error
+          schema:
+            $ref: '#/definitions/err'
+
+  /NexTrip/Routes:
+    get:
+      operationId: GetRoutes
+      security:
+        - AccessCode:
+            - 'routes:all'
+            - 'routes:express'
+            - 'routes:local'
+      description: Returns a list of Transit routes that are in service on the current day.
+      tags:
+        - Bus Routes
+      responses:
+        '200':
+          description: Successful response
+          schema:
+            $ref: '#/definitions/RouteData'
+        '401':
+          description: 'Unknown User, Not Authenticated'
+          schema:
+            $ref: '#/definitions/err'
+        '403':
+          description: >-
+            Not Authorized. Expired or Missing Access Token, or Access Token
+            lacks the scope of entitlement required
+          schema:
+            $ref: '#/definitions/err'
+        '429':
+          description: 'Transaction Volume Quota Exceeded, try again in 1 minute.'
+          schema:
+            $ref: '#/definitions/err'
+        '500':
+          description: Incomplete Request or Server Error
+          schema:
+            $ref: '#/definitions/err'
+
+  /NexTrip/Stops/{ROUTE}/{DIRECTION}:
+    get:
+      operationId: GetStops
+      security:
+        - AccessCode:
+            - 'routes:all'
+            - 'routes:express'
+            - 'routes:local'
+      description: Returns a list of Timepoint stops for the given Route/Direction. 
+      tags:
+        - Bus Routes
+      parameters:
+        - name: ROUTE
+          in: path
+          required: true
+          type: integer
+          description: Sepcify the Route ID as an integer. 
+        - name: DIRECTION
+          in: path
+          required: true
+          type: integer
+          description: Specify the direction as an integer.  1 (South), 2 (East), 3 (West), 4 (North)
+      responses:
+        '200':
+          description: Successful response
+          schema:
+            $ref: '#/definitions/success'
+        '401':
+          description: 'Unknown User, Not Authenticated'
+          schema:
+            $ref: '#/definitions/err'
+        '403':
+          description: >-
+            Not Authorized. Expired or Missing Access Token, or Access Token
+            lacks the scope of entitlement required
+          schema:
+            $ref: '#/definitions/err'
+        '429':
+          description: 'Transaction Volume Quota Exceeded, try again in 1 minute.'
+          schema:
+            $ref: '#/definitions/err'
+        '500':
+          description: Incomplete Request or Server Error
+          schema:
+            $ref: '#/definitions/err'
+
+  /NexTrip/VehicleLocations/{ROUTE}:
+    get:
+      operationId: GetVehicleLocations
+      security:
+        - AccessCode:
+            - 'routes:all'
+            - 'routes:express'
+            - 'routes:local'
+      description: >-
+        This operation returns a list of vehicles currently in service that have recently (within 5 minutes) 
+        reported their locations. A route paramter is used to return results for the given route. 
+        Use "0" for the route parameter to return a list of all vehicles in service.
+      tags:
+        - Bus Routes
+      parameters:
+        - name: ROUTE
+          in: path
+          required: true
+          type: integer
+          description: Sepcify the Route ID as an integer. 
+      responses:
+        '200':
+          description: Successful response
+          schema:
+            $ref: '#/definitions/success'
+        '401':
+          description: 'Unknown User, Not Authenticated'
+          schema:
+            $ref: '#/definitions/err'
+        '403':
+          description: >-
+            Not Authorized. Expired or Missing Access Token, or Access Token
+            lacks the scope of entitlement required
+          schema:
+            $ref: '#/definitions/err'
+        '429':
+          description: 'Transaction Volume Quota Exceeded, try again in 1 minute.'
+          schema:
+            $ref: '#/definitions/err'
+        '500':
+          description: Incomplete Request or Server Error
+          schema:
+            $ref: '#/definitions/err'
+
+  /NexTrip/update/{ROUTE}:
+    post:
+      operationId: updateroute
+      security:
+        - admin_AccessCode:
+            - admin_updateroutes
+      description: Update a bus route
+      tags:
+        - Bus Route Info
+      parameters:
+        - name: ROUTE
+          in: path
+          required: true
+          type: integer
+          description: Sepcify the Route ID as an integer. 
+      responses:
+        '200':
+          description: Successful response
+          schema:
+            $ref: '#/definitions/RouteData'
+        '401':
+          description: 'Unknown User, Not Authenticated'
+          schema:
+            $ref: '#/definitions/err'
+        '403':
+          description: >-
+            Not Authorized. Expired or Missing Access Token. Or Access Token
+            lacks the scope of entitlement required
+          schema:
+            $ref: '#/definitions/err'
+        '429':
+          description: 'Transaction Volume Quota Exceeded, try again in 1 minute.'
+          schema:
+            $ref: '#/definitions/err'
+        '500':
+          description: Incomplete Request or Server Error
+          schema:
+            $ref: '#/definitions/err'
+definitions:
+  OAuth_Token:
+    type: object
+    properties:
+      token:
+        type: string
+      refresh_token:
+        type: string
+      token_type:
+        type: string
+      expires_in:
+        type: string
+      scopes:
+        type: string
+  success:
+    type: object
+    properties:
+      code:
+        type: integer
+        format: int32
+      message:
+        type: string
+      fields:
+        type: string
+  RouteData:
+    type: object
+    properties:
+      code:
+        type: integer
+        format: int32
+      Route:
+        type: integer
+        format: int32
+      ProviderID:
+        type: integer
+        format: int32 
+      Description:
+        type: string
+  TimePoints:
+    type: object 
+    properties:
+      code:
+        type: integer
+        format: int32
+      Actual: 
+        type: boolean
+      BlockNumber:
+        type: integer
+        format: int32 
+      DepartureText: 
+        type: string
+      DepartureTime: 
+        type: string 
+      Description: 
+        type: string 
+      Gate:
+        type: string
+      Route: 
+        type: integer 
+        format: int32 
+      RouteDirection: 
+        type: string 
+      Terminal: 
+        type: string 
+      VehicleHeading: 
+        type: integer
+        format: int32 
+      VehicleLatitude: 
+        type: string 
+      VehicleLongitude:
+        type: string
+  err:
+    type: object
+    properties:
+      code:
+        type: integer
+        format: int32
+      message:
+        type: string
+      fields:
+        type: string
+securityDefinitions:
+  AccessCode:
+    type: oauth2
+    scopes:
+      'routes:all': Grants read access to all routes
+      'routes:express': Grants read access to only express routes
+      'routes:local': Grants read access to local routes
+      readpublic_key: List and view details for public keys
+    flow: accessCode
+    authorizationUrl: 'https://svc.metrotransit.org/oauth/authorize'
+    tokenUrl: 'https://svc.metrotransit.org/oauth/token'
+  MobileApp_Implicit:
+    type: oauth2
+    scopes:
+      readpublic_key: List and view details for public keys
+    flow: implicit
+    authorizationUrl: 'https://svc.metrotransit.org/oauth/authorize'
+  admin_AccessCode:
+    type: oauth2
+    scopes:
+      admin_updateroutes: Grants write access to routes data
+      admin_writepublic_key: 'Create, list, and view details for public keys'
+      admin_public_key: Fully manage PKI keys
+    flow: accessCode
+    authorizationUrl: 'https://svc.metrotransit.org/oauth/authorize'
+    tokenUrl: 'https://svc.metrotransit.org/oauth/token'
