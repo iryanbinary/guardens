@@ -39,6 +39,13 @@ Response:
 2017-10-23 22:19:22 -0600
 
 
+API Load Test 100 Requests
+
+usage:
+
+ruby busloop.rb ROUTEID DIRECTION STOPID
+
+
 Also see the extra credit work that I did to create a Swagger 2.0 powered interactive Web UI API client with user friendly documentation and API server iteration suggestions to implement OAuth 2.0 with scoped tokens for finer grained client application authorization and a new update route POST operation that requires the usage of a admin token to futher restrict access to higher risk API operations that update data in the database. 
 
 Find this work in NexTripAPI_RubyCommandLineClientApp / Swagger+docs
