@@ -3,6 +3,8 @@
 # Copyright 2017 guarden.io founder Ryan Bagnulo
 # All Rights Reserved. 
 
+require 'prime'
+
 start = Time.now
 puts start.to_s
 n=0
