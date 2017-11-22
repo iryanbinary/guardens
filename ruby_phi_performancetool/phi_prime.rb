@@ -12,7 +12,7 @@ x,y=0,1
 1000000.times do                                                          
 puts y
 elapsed = Time.now - start
-puts y
+
 p=Prime.instance.prime?(y).to_s
 n=n+1
 l=y.to_s.length
