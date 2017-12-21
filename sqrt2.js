@@ -15,7 +15,7 @@ c=a+b;
 d=(2 * a) + b;
 sqrt=d/c;
 
-document.writeln(" <br />"); document.writeln("for iteration " + n + " c = " + c + " d = " + d + " SqRt2 is " + sqrt);
+document.writeln(" <p />"); document.writeln("for iteration " + n + " c = " + c + " d = " + d + "<p /> √ 2 is " + sqrt);
 a=c;
 b=d;
 
