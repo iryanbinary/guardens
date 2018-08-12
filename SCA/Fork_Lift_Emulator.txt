@@ -1,0 +1,55 @@
+Running the Fork Lift Emulator on Windows
+Author @iryanb Copyright 2018 All Rights Reserved
+guarden.io, founder Ryan Bagnulo
+
+**************************************
+
+install Ruby 
+
+https://rubyinstaller.org/
+https://github.com/oneclick/rubyinstaller2/releases/download/rubyinstaller-2.5.1-2/rubyinstaller-devkit-2.5.1-2-x64.exe
+
+install the ruby ffi and rest-client gems
+
+C:\Ruby25-x64\bin>gem.cmd install ffi
+Successfully installed ffi-1.9.25-x64-mingw32
+Parsing documentation for ffi-1.9.25-x64-mingw32
+Done installing documentation for ffi after 1 seconds
+1 gem installed
+
+
+C:\Ruby25-x64\bin>gem.cmd install rest-client
+Fetching: rest-client-2.0.2-x64-mingw32.gem (100%)
+Successfully installed rest-client-2.0.2-x64-mingw32
+Parsing documentation for rest-client-2.0.2-x64-mingw32
+Installing ri documentation for rest-client-2.0.2-x64-mingw32
+Done installing documentation for rest-client after 7 seconds
+1 gem installed
+
+
+
+****************************************
+
+Install Docker CE
+
+Get the influxdb container image
+
+docker pull influxdb
+
+
+Create a REST API interface to influxdb
+https://github.com/d-led/influxdb-cpp-rest 
+
+or 
+
+Get the mongodb container image
+
+
+Create a REST API interface to mongodb
+https://spring.io/guides/gs/accessing-mongodb-data-rest/
+
+Install and launch MongoDB
+Create a domain object
+Create a lift work repository
+Make the application executable
+Test the application
